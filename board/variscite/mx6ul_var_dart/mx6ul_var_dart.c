@@ -696,6 +696,9 @@ int board_late_init(void)
 	snprintf(sdram_size_str, SDRAM_SIZE_STR_LEN, "%d", (int) (gd->ram_size / 1024 / 1024));
 	setenv("sdram_size", sdram_size_str);
 
+	get_mac_address(); //Leo 20210831
+
+
 	switch (get_boot_device()) {
 	case SD1_BOOT:
 	case MMC1_BOOT:
@@ -890,3 +893,46 @@ void board_init_f(ulong dummy)
 	board_init_r(NULL, 0);
 }
 #endif
+
+
+extern int i2c_read(uchar chip, uint addr, int alen, uchar *buf, int len);
+extern int i2c_write(uchar chip, uint addr, int alen, uchar *buf, int len);
+
+int get_mac_address( void )
+{
+	int		ret;
+	uchar	buf[32];
+	uchar	checksum;
+	int		i;
+	char		*s;
+	char		mac_string[32];
+        char		mac_string_[32];
+
+	printf( "================= MAC Address =================\n" );
+	ret = i2c_read( 0x50 , 0x00 , 1 , buf , 7 );
+	if( ret == 0 ) {
+		checksum = 0;
+		for( i=0 ; i<6 ; i++ )	checksum += buf[i];
+
+		//if( buf[12] == checksum )
+			sprintf( mac_string , "%x:%x:%x:%x:%x:%x" , buf[0] , buf[1] , buf[2] , buf[3] , buf[4] , buf[5] );
+                        sprintf( mac_string_ , "%x:%x:%x:%x:%x:%x" , buf[0] , buf[1] , buf[2] , buf[3] , buf[4] , buf[5] +1);
+		//else
+		//	sprintf( mac_string , "%s" , "2C:26:5F:6F:FF:00" );
+
+		printf( "MAC Address %s\n" , mac_string );
+	        printf( "MAC Address2 %s\n" , mac_string_ );
+		
+		s = getenv("ethaddr" );
+		//if (s == NULL) {				
+			setenv( "ethaddr"  , mac_string );
+                        setenv( "eth1addr"  , mac_string_ );
+		//}
+		
+	}
+	else {
+		printf( "Get MAC Address Error!\n" );
+	}
+	printf( "===============================================\n" );	
+}
+
